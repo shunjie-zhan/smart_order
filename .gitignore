@@ -7,4 +7,5 @@ venv/
 
 #node module
 ui/node_modules/
-node_modules/
+ui/node_modules/
+ui/notREADME.md/
