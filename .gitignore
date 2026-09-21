@@ -4,5 +4,7 @@ venv/
 
 #
 .env
+
+#node module
 ui/node_modules/
 node_modules/
