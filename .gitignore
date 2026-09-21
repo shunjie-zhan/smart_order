@@ -1,0 +1,8 @@
+#python environment
+.venv/
+venv/
+
+#
+.env
+ui/node_modules/
+node_modules/
