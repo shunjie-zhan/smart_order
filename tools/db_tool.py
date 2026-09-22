@@ -156,7 +156,7 @@ def get_string_menu_items() ->str:
 
     except Exception as err:
         logger.error(f'Error al consultar todo los items: {err}')
-        return "False"
+        return "No menu items encontrado"
 
 def get_all_list_items() -> List[Dict[str,Any]] :
     """
