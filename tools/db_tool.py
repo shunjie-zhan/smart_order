@@ -2,6 +2,7 @@
 se encarga de la gestion de base de dato MySQL, relacionado con menu_items
 
 """
+from typing import List, Dict,Any
 import logging
 from logging import Logger
 
@@ -157,14 +158,91 @@ def get_all_menu_items() ->str:
         logger.error(f'Error al consultar todo los items: {err}')
         return "False"
 
+def get_all_list_items() -> List[Dict[str,Any]] :
+    """
+
+    :return: una lista que contiene dicto de String + variable
+    """
+
+    try:
+        with (DataBaseConnection() as db):
+            # 1. sentencia SQL
+            query_sql = """
+            SELECT
+                id,dish_name,price,description,category,
+                spice_level,flavor,main_ingredients,cooking_method,
+                is_vegetarian,allergens,is_available
+            FROM menu_items
+            WHERE is_available = 1
+            ORDER BY category, dish_name
+            """
+            # 2. ejecutar SQL
+            db.cursor.execute(query_sql)
+
+            # 3. obtener resultado
+            db_result = db.cursor.fetchall()
+
+            # 4. processar resultado + return
+            if not db_result:
+                logger.error(f'No items found')
+                return []
+
+            menu_lista= []
+            for item in db_result:
+                # 4.1 mapper of spice level
+                spice_level_mapping = {
+                    0: "no picante",
+                    1: "poco picante",
+                    2: "medio picante",
+                    3: "muy picante"
+                }
+                formated_spice_level = spice_level_mapping.get(item.get('spice_level'),"sin resultado de picante")
+
+                processed_item = {
+                  "id": item['id'],
+                  "dish_name": item['dish_name'],
+                  "price": float(item['price']),
+                  "formatted_price": f"{item['price']:.2f}€",
+                  "description": item['description'] or "sin descripcion",
+                  "category": item['category'],
+                  "spice_level": item['spice_level'],
+                  "formatted_spice": formated_spice_level,
+                  "flavor": item['flavor'] or "sin sabor",
+                  "main_ingredients": item['main_ingredients'] or "sin ingredientes",
+                  "cooking_method": item['cooking_method'] or "sin metodo coccion",
+                  "is_vegetarian": bool(item['is_vegetarian']),
+                  "formatted_vegetarian": "si" if item['is_vegetarian'] else "no" ,
+                  "allergens": item['allergens'] if item['allergens'].strip() else "sin alergicos",
+                  "is_available": bool( item['is_available'])
+                }
+                menu_lista.append(processed_item)
+
+                # 4. return resultado
+            logger.info(f"Total platos extraidos: {len(menu_lista)}")
+            return menu_lista
+
+    except Exception as err:
+        logger.error(f'Error al leer lista de los items: {err}')
+        return []
+
 # if __name__ == '__main__':
 #     print(f'Test con la conecion de BD')
 #     test_connection()
 
-if __name__ == '__main__':
-    print("todo platos en string")
-    menu_items = get_all_menu_items()
-    print(menu_items)
+# if __name__ == '__main__':
+#     print("todo platos en string")
+#     menu_items = get_all_menu_items()
+#     print(menu_items)
+#     print("v12")
+
+# if __name__ == '__main__':
+#     print("todo platos en lista")
+#     menu_items = get_all_list_items()
+#     # for item in menu_items:
+#     #     print(item)
+#     for index, item in enumerate(menu_items):
+#         print(f"Con enumeracion {index + 1}, el plato es{item}")
+
 
 
 
