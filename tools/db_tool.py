@@ -98,7 +98,7 @@ def test_connection():
         else:
             logger.error(f'Conecion error: {db_result}')
 
-def get_all_menu_items() ->str:
+def get_string_menu_items() ->str:
     """
     coger todo los items, conectando con \n, y devolviendo string, para vectorizar
     :return:str
