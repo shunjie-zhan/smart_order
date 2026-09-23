@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 from pinecone import Pinecone
 from pinecone import ServerlessSpec
-from typing import List
+from typing import List, Dict
 import dashscope
 from http import HTTPStatus
 
@@ -77,13 +77,14 @@ class PineconeVectorDB:
         :return:
         """
         try:
+
             if self.index and self.initialize_conection():
                 logger.error("sin index")
                 return False
 
             # 1. si hay valor se elimna
             vector_status=self.index.describe_index_status()
-            pc_vector_count=vector_status.total_vector_count
+            pc_vector_count=vector_status["total_vector_count"]
             if pc_vector_count == 0:
                 logger.info("sin index")
                 return True
@@ -110,7 +111,7 @@ class PineconeVectorDB:
             )
             # 2. procesar resultado
             if resp.status_code == HTTPStatus.OK:
-                logger.info(f"[String -> vector] exitosa con HttpStatus:{resp.status_code}")
+                # logger.info(f"[String -> vector] exitosa con HttpStatus:{resp.status_code}")
                 return resp.get("output").get("embeddings")[0].get("embedding")
             else:
                 logger.error(f"[Error -> vector con HttpStatus:{resp.status_code}]")
@@ -120,7 +121,7 @@ class PineconeVectorDB:
             return None
             pass
 
-    def upset_menu_data(self,menu_data:str=None, batch_size:int=30)->bool:
+    def upset_menu_data(self,menu_data:str=None, batch_size:int=30,clear_existed:bool=True)->bool:
         """
         almacenar vector a pinecone
         :arg1 string a procesar
@@ -133,8 +134,11 @@ class PineconeVectorDB:
         try:
             if not menu_data:
                 # 1. consultar BD si no existe
-                logger.debug("antes de consulta MySQLDB")
+                # logger.debug("antes de consulta MySQLDB")
                 from smart_order.tools.db_tool import get_string_menu_items
+                if clear_existed:
+                    self.clear_vector()
+
                 menu_data = get_string_menu_items()
                 # 2.procear texto
                 if not self._validation_str(menu_data):
@@ -170,7 +174,7 @@ class PineconeVectorDB:
                     batch.append((unique_id,vector,menu_meta_data))
 
                     #3.1. almancenar
-                    logger.info(f"inseccion de batch: {len(batch)} y batch: {batch_size})")
+                    # logger.info(f"inseccion de batch: {len(batch)} y batch: {batch_size})")
                     if len(batch) >= batch_size:
                         logger.info("inseccion de batch")
                         self.index.upsert(vectors=batch)
@@ -225,9 +229,46 @@ class PineconeVectorDB:
             logger.error(f"[ERROR al split] {err}")
             return []
 
+    def search_similar(self,query_todo:str,match_key:int=2)-> List[Dict[str,any]]:
+
+        try:
+            if self.index and not self.initialize_conection():
+                logger.error("sin instancia de index")
+                return []
+            query_vector=self._embedding_content(query_todo)
+            if not query_vector or len(query_vector) != self.dimension:
+                logger.error("sin query_vector or sin dimension")
+                return []
+            pinecone_query_result= self.index.query(
+                vector=query_vector,
+                top_k=match_key,
+                include_metadata=True,
+            )
+
+            matches_result=pinecone_query_result["matches"]
+            if not matches_result:
+                return []
+
+            out_result=[]
+            for result in matches_result:
+                match_item={
+                    "id":result["id"],
+                    "score":result["score"],
+                    "content":result["metadata"]["content"],
+                    "line_number":result["metadata"]["line_number"],
+                }
+                out_result.append(match_item)
+                logger.debug(f"resultado mached con len: {len(out_result)}")
+            return out_result
+
+        except Exception as err:
+            logger.error(f"[ERROR al search similar ] {err}")
+            return []
+
+
 pinecone_db=PineconeVectorDB()
 
-if __name__ == '__main__':
-    pinecone_db.initialize_conection()
-    pinecone_db.upset_menu_data(menu_data=None,batch_size=30)
-
+# if __name__ == '__main__':
+#     pinecone_db.initialize_conection()
+#     pinecone_db.upset_menu_data(menu_data=None,batch_size=30,clear_existed=True)
+#
