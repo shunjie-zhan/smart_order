@@ -128,6 +128,8 @@ class PineconeVectorDB:
         :return:
         """
 
+        # logger.info("inicio de funcion upset_menu_data")
+        print("inicio de funcion upset_menu_data")
         try:
             if not menu_data:
                 # 1. consultar BD si no existe
@@ -159,16 +161,18 @@ class PineconeVectorDB:
                         return False
 
                     menu_meta_data={
-                        "content":vector,
+                        "content":chunk,
                         "line_number":index,
                         "dish_id":f"dish_id{index}",
                         "type":"menu_item",
                     }
-                    unique_id=index
+                    unique_id=str(index)
                     batch.append((unique_id,vector,menu_meta_data))
 
                     #3.1. almancenar
+                    logger.info(f"inseccion de batch: {len(batch)} y batch: {batch_size})")
                     if len(batch) >= batch_size:
+                        logger.info("inseccion de batch")
                         self.index.upsert(vectors=batch)
                         batch=[]
 
@@ -181,7 +185,7 @@ class PineconeVectorDB:
                 return False
 
         except Exception as err:
-            logger.error(f"[ERROR al almacenar Vector DB] {err}")
+            logger.error(f"[ERROR en upset_menu_data > al almacenar Vector DB] {err}")
             return  False
 
     def _validation_str(self,str_validation:str)->bool:
