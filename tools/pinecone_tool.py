@@ -239,7 +239,8 @@ class PineconeVectorDB:
             if not query_vector or len(query_vector) != self.dimension:
                 logger.error("sin query_vector or sin dimension")
                 return []
-            pinecone_query_result= self.index.query(
+            # pinecone_query_result = self.index.search(query_vector)
+            pinecone_query_result = self.index.query(
                 vector=query_vector,
                 top_k=match_key,
                 include_metadata=True,
@@ -268,7 +269,13 @@ class PineconeVectorDB:
 
 pinecone_db=PineconeVectorDB()
 
-# if __name__ == '__main__':
-#     pinecone_db.initialize_conection()
+if __name__ == '__main__':
+    pinecone_db.initialize_conection()
 #     pinecone_db.upset_menu_data(menu_data=None,batch_size=30,clear_existed=True)
 #
+    print("busqueda vectorial")
+    similar_result = pinecone_db.search_similar(query_todo="川菜")
+    for result in similar_result:
+        print(result)
+
+
