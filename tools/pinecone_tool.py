@@ -2,8 +2,7 @@
 en encargar de la conexion con el base de dato vectorial PineCone y su respectivo manejo
 
 """
-from gettext import textdomain
-from operator import index
+
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -13,9 +12,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 from pinecone import Pinecone
 from pinecone import ServerlessSpec
-from typing import List, Dict
+from typing import List, Dict, Any
 import dashscope
 from http import HTTPStatus
+import re
 
 class PineconeVectorDB:
     """
@@ -232,7 +232,7 @@ class PineconeVectorDB:
     def search_similar(self,query_todo:str,match_key:int=2)-> List[Dict[str,any]]:
 
         try:
-            if self.index and not self.initialize_conection():
+            if not self.initialize_conection() and not self.index :
                 logger.error("sin instancia de index")
                 return []
             query_vector=self._embedding_content(query_todo)
@@ -269,13 +269,69 @@ class PineconeVectorDB:
 
 pinecone_db=PineconeVectorDB()
 
+
+# exponer fncion de consultar a PineconeDB
+def pinecone_input(menu_data:str=None,clear_existed:bool=True)->bool:
+    return  pinecone_db.upset_menu_data(menu_data,clear_existed=clear_existed)
+
+# exponer funcion de consulta a LocalDB
+def search_menu_items(query:str,match_key:int=2 )->List[str]:
+
+    result_similar =pinecone_db.search_similar(query,match_key=match_key)
+
+    if not result_similar:
+        return []
+
+    return [ result["content"] for result in result_similar]
+
+
+def search_menu_items_ids(query:str,match_key:int=2 )->Dict[str, Any]:
+    """
+                    "id":result["id"],
+                    "score":result["score"],
+                    "content":result["metadata"]["content"],
+                    "line_number":result["metadata"]["line_number"],
+    :param query:
+    :param match_key:
+    :return:
+    """
+
+    result_similar =pinecone_db.search_similar(query,match_key=match_key)
+
+    if not result_similar:
+        return {}
+
+    ids=[]
+    for result in result_similar:
+        content = result["content"]
+
+        re_result = re.match(r"dish_id:(\d+)",content)
+
+        if re_result:
+            id_re=int(re_result.group(1))
+        else:
+            id_re=result["id"]
+        ids.append(id_re)
+
+
+    return {
+        "contents":[result["content"] for result in result_similar],
+        "ids":ids,
+        "scores":[result["score"] for result in result_similar],
+    }
+
+
 if __name__ == '__main__':
-    pinecone_db.initialize_conection()
+    # pinecone_db.initialize_conection()
 #     pinecone_db.upset_menu_data(menu_data=None,batch_size=30,clear_existed=True)
 #
-    print("busqueda vectorial")
-    similar_result = pinecone_db.search_similar(query_todo="川菜")
-    for result in similar_result:
-        print(result)
+    # print("busqueda vectorial")
+    # similar_result = pinecone_db.search_similar(query_todo="quiero que me recomendes 川菜")
+    # for result in similar_result:
+    #     print(result)
+
+    print("consular de busqueda similar")
+    result_search = search_menu_items_ids(query="quiero que me recomendes 川菜",match_key=2)
+    print(result_search)
 
 
