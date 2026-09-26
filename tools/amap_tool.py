@@ -4,12 +4,10 @@ planificacion de la trayectoria
 
 """
 import logging
-from http.client import responses
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 import os
-from typing import Dict, Any, List, Optional, Tuple, Literal, Union
+from typing import Dict, Any,  Optional,  Literal, Union
 import requests
 from urllib3 import Retry
 from requests.adapters import HTTPAdapter
@@ -20,7 +18,7 @@ from dataclasses import dataclass
 load_dotenv()
 
 pathInput = Literal["1", "2", "3"]
-pathModel = Literal["walking", "bike", "driving"]
+pathModel = Literal["walking", "bicycling", "driving"]
 
 
 class PathConverter:
@@ -114,14 +112,14 @@ def geocode_address(address) -> Dict[str, Any]:
         if response["status"] != "1":
             return {
                 "status": False,
-                "messege": response["info"]
+                "message": response["info"]
             }
         geocodes = response["geocodes"][0]
 
         return {
             "formatted_address": geocodes["formatted_address"],
             "location": geocodes["location"],
-            "success": True
+            "status": True
         }
 
     except Exception as err:
@@ -129,7 +127,7 @@ def geocode_address(address) -> Dict[str, Any]:
         raise f"Error en Geo request{err}"
 
 
-def calculate_distance(first_point: str, second_point: str, param: pathInput or None) -> Dict[str, Any]:
+def calculate_distance(first_point: str, second_point: str, param: pathInput ="2") -> Dict[str, Any]:
     """
     https://restapi.amap.com/v5/direction/driving?parameters
     https://restapi.amap.com/v5/direction/walking?parameters
@@ -153,9 +151,9 @@ def calculate_distance(first_point: str, second_point: str, param: pathInput or 
         }
         # 3. construir parametro
         parametro = {
-            "key": config.AMAP_API_KEY,
             "origin": first_point,
             "destination": second_point,
+            "key": config.AMAP_API_KEY
         }
 
         if result_mode == "driving":
@@ -176,7 +174,7 @@ def calculate_distance(first_point: str, second_point: str, param: pathInput or 
         return {
             "distance": int(path["distance"]),
             "duration": duration,
-            "status": "success",
+            "success": True,
         }
 
     except Exception as err:
@@ -193,31 +191,32 @@ def check_range(address: str, param: pathInput = None) -> Dict[str, Any]:
     try:
         geo_address = geocode_address(address)
 
-        if geo_address["status"]:
+        if not geo_address["status"]:
             return {
                 "status": "fail",
-                "messege": geo_address["message"],
+                "message": geo_address["message"],
             }
-        objective = f"{config.MERCHANT_LATITUDE}, {config.MERCHANT_LONGITUDE}"
+        objective = f"{config.MERCHANT_LONGITUDE},{config.MERCHANT_LATITUDE}"
+        # Espacio que hay que entref"{config.MERCHANT_LONGITUDE},/ /{config.MERCHANT_LATITUDE}", hace que un api funcionara y otra no, un coste de una hora inspeccionado
         result_distance = calculate_distance(first_point=objective, second_point=geo_address["location"], param=param or config.DEFAULT_PATH_MODE)
 
         if not result_distance["success"]:
             return {
                 "status": "fail",
-                "messege": result_distance["message"],
+                "message": result_distance["message"],
             }
         distance = result_distance["distance"] /1000
-        in_range = result_distance["distance"] <= config.MERCHANT_LATITUDE
+        in_range = result_distance["distance"] <= int(config.DELIVERY_RADIUS)
         return {
             "status": "success",
             "in_range": in_range,
             "distance": distance,
-            "duration": result_distance["duration"],
+            "duration": int(result_distance["duration"]),
             "formatted_distance": geo_address["formatted_address"],
             "message": (
-                f"Direccion de reparto: {geo_address["formatted_address"]} \n"
-                f"Distancia de reparto: {distance} \n "
-                f"Estado de reparto: {'En area' if in_range else 'Fuera area'} "
+                f"Direccion del cliente: {geo_address["formatted_address"]} \n"
+                f"Distancia de reparto: {distance} Km \n"
+                f"En Area de reparto?: {'En area' if in_range else 'Fuera area'}"
             )
 
         }
@@ -226,8 +225,41 @@ def check_range(address: str, param: pathInput = None) -> Dict[str, Any]:
         raise  err
 
 
-if __name__ == '__main__':
-    # print(geocode_adress(address="北京市昌平区宏福科技园(郑平路")) #116.365533,40.102488
-    # print(geocode_adress(address="北京市昌平区温都水城(快速公交站)")) #116.372850,40.106030
+# if __name__ == '__main__':
+#     # print(geocode_address(address="北京市昌平区宏福科技园(郑平路")) #116.365533,40.102488
+#     # print(geocode_address(address="北京市昌平区温都水城(快速公交站)")) #116.372850,40.106030
+#
+#     print(calculate_distance(first_point="116.365533,40.102488", second_point="116.372850,40.106030"))
 
-    print(calculate_distance(first_point="116.365533,40.102488", second_point="116.372850,40.106030"))
+    # 使用示例
+if __name__ == "__main__":
+    # 不同模式的使用
+    pass
+    test_address = "北京市昌平区宏福科技园(郑平路)"  # 测试地址
+    # print("\n=== 测试不同路径模式 ===")
+    # 测试步行模式 (1)
+    print("\n1. 步行模式测试:")
+    result1 = check_range(test_address, "1")
+    minutes = result1['duration'] // 60
+    seconds = result1['duration'] % 60
+    print(
+        f"步行模式距离: {result1['distance']}公里 时间: {result1['duration']}秒 ({minutes}分{round(seconds, 2)}秒)")
+    print(f"是否在配送范围内: {result1['message']}")
+
+    # 测试骑行模式 (2)
+    print("\n2. 骑行模式测试:")
+    result2 = check_range(test_address, "2")
+    minutes = result2['duration'] // 60
+    seconds = result2['duration'] % 60
+    print(
+        f"步行模式距离: {result2['distance']}公里 时间: {result2['duration']}秒 ({minutes}分{round(seconds, 2)}秒)")
+    print(f"是否在配送范围内: {result2['message']}")
+
+    # 测试驾车模式 (3)
+    print("\n3. 驾车模式测试:")
+    result3 = check_range(test_address, "3")
+    minutes = result3['duration'] // 60
+    seconds = result3['duration'] % 60
+    print(
+        f"步行模式距离: {result3['distance']}公里 时间: {result3['duration']}秒 ({minutes}分{round(seconds, 2)}秒)")
+    print(f"是否在配送范围内: {result3['message']}")
