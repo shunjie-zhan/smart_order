@@ -7,6 +7,7 @@ donde se expone tres api para:
 
 """
 import logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -52,15 +53,17 @@ class DeliveryResponse(BaseModel):
     success: bool
     in_range: bool
     distance: float
-    formatted_address: str # in geo-located
+    formatted_address: str  # in geo-located
     duration: float
     message: str
     travel_mode: pathInput
-    input_address:str
+    input_address: str
+
 
 class DeliveryRequest(BaseModel):
-    input_address: str
-    travel_mode: pathInput ="2"
+    address: str
+    travel_mode: pathInput = "2"
+
 
 @app.post("/delivery", response_model=DeliveryResponse)
 async def delivery(request: DeliveryRequest):
@@ -69,8 +72,10 @@ async def delivery(request: DeliveryRequest):
     :param request:
     :return:
     """
+    # logger.debug(f"DeliveryRequest: {request}")
     try:
-        result_distance = check_delivery_range(request.input_address,request.travel_mode)
+        # logger.debug(f"DeliveryRequest: {request}")
+        result_distance = check_delivery_range(request.address, request.travel_mode)
         if result_distance["status"] == "fail":
             return DeliveryResponse(
                 success=False,
@@ -90,14 +95,14 @@ async def delivery(request: DeliveryRequest):
             duration=result_distance["duration"],
             message=result_distance["message"],
             travel_mode=request.travel_mode,
-            input_address=request.input_address,
+            input_address=request.address,
 
         )
     except Exception as err:
         logging.error(f"Error en /delivery: {err}")
         return DeliveryResponse(
             success=False,
-            message=f"Error en /delivery: {err}"
+            message=f'Error en /delivery: {err}'
         )
 
 # def read_root():

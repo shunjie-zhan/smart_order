@@ -321,17 +321,17 @@ def search_menu_items_ids(query:str,match_key:int=2 )->Dict[str, Any]:
     }
 
 
-if __name__ == '__main__':
-    # pinecone_db.initialize_conection()
-#     pinecone_db.upset_menu_data(menu_data=None,batch_size=30,clear_existed=True)
+# if __name__ == '__main__':
+#     # pinecone_db.initialize_conection()
+# #     pinecone_db.upset_menu_data(menu_data=None,batch_size=30,clear_existed=True)
+# #
+#     # print("busqueda vectorial")
+#     # similar_result = pinecone_db.search_similar(query_todo="quiero que me recomendes 川菜")
+#     # for result in similar_result:
+#     #     print(result)
 #
-    # print("busqueda vectorial")
-    # similar_result = pinecone_db.search_similar(query_todo="quiero que me recomendes 川菜")
-    # for result in similar_result:
-    #     print(result)
-
-    print("consular de busqueda similar")
-    result_search = search_menu_items_ids(query="quiero que me recomendes 川菜",match_key=2)
-    print(result_search)
+#     print("consular de busqueda similar")
+#     result_search = search_menu_items_ids(query="quiero que me recomendes 川菜",match_key=2)
+#     print(result_search)
 
 
